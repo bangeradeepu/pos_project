@@ -1,80 +1,58 @@
-from rest_framework import generics
 from django.http import JsonResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
+from rest_framework.generics import ListAPIView
 from django.views.decorators.csrf import csrf_exempt
 from .models import AddonCategories, AddonVariants, AddonCategoryOutletLink, AddonVariantOutletLink
 from .serializers import AddonCategoriesSerializer, AddonVariantsSerializer
 from .validations import (
-    get_validator, addon_get_validator, category_post_validator,
+    addon_get_validator, category_post_validator,
     category_put_validator, delete_validator, update_outlet_validator,
     addon_post_validator, addon_put_validator, addon_category_link_validator
 )
+class AddonCategoriesListView(ListAPIView):
+    queryset = AddonCategories.objects.all()
+    serializer_class = AddonCategoriesSerializer
 
+
+@csrf_exempt
 def category_post_view(request):
     try:
         category_post_validator(request.POST)  # Validate the POST request
     except ValidationError as e:
         return JsonResponse({"error": str(e)}, status=400)
 
+
     # If the request data is valid, proceed with further operations
     brand_id = request.POST.get('brand_id')
     name = request.POST.get('name')
-    image = request.POST.get('image')
+    image_file = request.FILES.get('image')
+    created_on = request.POST.get('created_on')  # Get created_on value from request
+    modified_on = request.POST.get('modified_on')  # Get modified_on value from request
+    visible = request.POST.get('visible')  # Get visible value from request
+    deleted = request.POST.get('deleted')  # Get deleted value from request
 
-    # Now, you can use the 'brand_id', 'name', and 'image' variables to create a new category in your database or perform any other operation.
+    # Now, you can use the variables to create a new category in your database or perform any other operation.
 
     # For example, you might create a new category using a serializer if you are using Django Rest Framework:
-    category_data = {'brand_id': brand_id, 'name': name, 'image': image}
+    category_data = {
+        'brand_id': brand_id,
+        'name': name,
+        'image': image_file,
+        'created_on': created_on,
+        'modified_on': modified_on,
+        'visible': visible,
+        'deleted': deleted,
+    }
     serializer = AddonCategoriesSerializer(data=category_data)
     if serializer.is_valid():
         serializer.save()
         return JsonResponse(serializer.data, status=201)
     return JsonResponse(serializer.errors, status=400)
 
-def category_get_view(request):
-    try:
-        get_validator(request.GET)  # Validate the GET request
-    except ValidationError as e:
-        return JsonResponse({"error": str(e)}, status=400)
 
-    # If the request data is valid, proceed with further operations
-    order = request.GET.get('order')
-    count = request.GET.get('count')
-    offset = request.GET.get('offset')
-    brand_id = request.GET.get('brand_id')
-
-    # Now, you can use the 'order', 'count', 'offset', and 'brand_id' variables to perform any filtering or retrieval of data from the database based on the query parameters.
-
-    # For example, you might retrieve a list of categories based on the query parameters using Django's ORM:
-    categories = AddonCategories.objects.filter(brand_id=brand_id)
-
-    # Apply any additional filtering based on the 'order', 'count', and 'offset' if required.
-    if order:
-        if order == 'asc':
-            categories = categories.order_by('name')
-        elif order == 'desc':
-            categories = categories.order_by('-name')
-
-    if count:
-        try:
-            count = int(count)
-            categories = categories[:count]
-        except ValueError:
-            pass
-
-    if offset:
-        try:
-            offset = int(offset)
-            categories = categories[offset:]
-        except ValueError:
-            pass
-
-    # Now, serialize the list of categories and return the JSON response.
-    serializer = AddonCategoriesSerializer(categories, many=True)
-    return JsonResponse(serializer.data, status=200)
 
 def addon_get_view(request):
     try:
@@ -293,7 +271,6 @@ def create_addon_category_link(request):
         except ValidationError as e:
             error_message = e.message
             return JsonResponse({'error': error_message}, status=400)
-        
         # Data is valid, create the object
         addon_category_link = AddonCategoryOutletLink(
             outlet_id=outlet_id,
@@ -301,7 +278,5 @@ def create_addon_category_link(request):
             visible=visible,
         )
         addon_category_link.save()
-        
         return JsonResponse({'message': 'Add-on category link created successfully'})
-    
     return JsonResponse({'error': 'Invalid request method'}, status=405)

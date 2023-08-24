@@ -2,18 +2,6 @@ from django.core.exceptions import ValidationError
 from pos_project import constants
 from jsonschema import validate
 
-def get_validator(body):
-    schema = {
-        'order': {'choices': ['asc', 'desc', '']},
-        'count': {'type': 'integer'},
-        'offset': {'type': 'integer'},
-        'brand_id': {'type': 'integer', 'required': True},
-    }
-
-    try:
-        validate_data(body, schema)
-    except ValidationError as e:
-        raise ValidationError({"error": e.message})
 
 def addon_get_validator(body):
     schema = {
@@ -32,7 +20,11 @@ def category_post_validator(body):
     schema = {
         'brand_id': {'type': 'integer', 'required': True},
         'name': {'type': 'string', 'minlength': 3, 'required': True},
-        'image': {'type': 'string', 'minlength': 3, 'required': True},
+        'image': {'type': 'file', 'required': True},
+        'created_on': {'type': 'number', 'maximum': 99999999.99, 'required': True},  # Adjust maximum value
+        'modified_on': {'type': 'number', 'maximum': 99999999.99, 'required': True},
+        'visible': {'type': 'boolean', 'required': True},
+        'deleted': {'type': 'boolean', 'required': True},
     }
 
     try:
